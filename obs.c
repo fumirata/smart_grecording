@@ -128,6 +128,15 @@ void obs_ws_event_handler(struct mg_connection* con, i32 ev, void* ev_data) {
 	}
 }
 
+// Poll in fixed slices until the flag equals the expected value.
+// Uses OBS_CONNECT_TIMEOUT_MS as the total time budget (unchanged).
+void obs_poll_while_flag_equals(bool* flag, bool expected_value) {
+	i32 max_iters = (OBS_CONNECT_TIMEOUT_MS + 99) / 100;
+	for (i32 i = 0; i < max_iters && *flag != expected_value; ++i) {
+		mg_mgr_poll(&obs_mgr, 100);
+	}
+}
+
 // === Connection lifecycle ===
 // Open the OBS WebSocket connection and wait until identified.
 i32 obs_connect() {
@@ -139,9 +148,15 @@ i32 obs_connect() {
 		return 1;
 	}
 	obs_ctx.con = con;
-	while (!obs_ctx.identified) {
-		mg_mgr_poll(&obs_mgr, 1000);
+
+	obs_poll_while_flag_equals(&obs_ctx.identified, true);
+	if (!obs_ctx.identified) {
+		log_fatal("OBS websocket connection timed out after %d ms", OBS_CONNECT_TIMEOUT_MS);
+		obs_disconnect();
+		obs_ctx.con = NULL;
+		return 1;
 	}
+
 	log_info("OBS websocket connection identified");
 	return 0;
 }
@@ -155,8 +170,7 @@ i32 obs_send_request(char* payload) {
 	obs_ctx.task_complete = false;
 
 	mg_ws_send(obs_ctx.con, payload, strlen(payload), WEBSOCKET_OP_TEXT);
-	while (!obs_ctx.task_complete)
-		mg_mgr_poll(&obs_mgr, 1000);
+	obs_poll_while_flag_equals(&obs_ctx.task_complete, true);
 
 	return 0;
 }
