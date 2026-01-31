@@ -1,3 +1,4 @@
+// === Includes ===
 #include "mongoose.h"
 #include "obs.h"
 #include "types.h"
@@ -8,28 +9,32 @@
 #include <tlhelp32.h>
 #include <wchar.h>
 #include <windows.h>
+#include <shellapi.h>
 
 
 
 
 
-bool is_separator(char c) {
+// === Path helpers ===
+// Accept both Windows and POSIX separators to handle mixed paths.
+bool is_path_separator(char c) {
 	return (c == '\\' || c == '/');
 }
 
-i32 parse_game_name(const char* path, char* output, u32 output_size) {
+// Extract the Steam "common/<game>" folder name from a full path.
+i32 extract_game_name_from_path(const char* path, char* output, i32 output_size) {
 	const char* common_ptr = strstr(path, "common");
 	if (common_ptr == NULL) {
 		return 1;
 	}
 
 	const char* start = common_ptr + 6;
-	if (is_separator(*start)) {
+	if (is_path_separator(*start)) {
 		start++;
 	}
 
 	const char* end = start;
-	while (*end != '\0' && !is_separator(*end)) {
+	while (*end != '\0' && !is_path_separator(*end)) {
 		end++;
 	}
 
@@ -44,54 +49,56 @@ i32 parse_game_name(const char* path, char* output, u32 output_size) {
 }
 
 
-// Check if OBS is running.
-i32 is_obs_running(bool* running) {
-	HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-	if (hSnapshot == INVALID_HANDLE_VALUE) {
+// === OBS helpers ===
+// Check for an existing OBS process by executable name.
+i32 is_obs_process_running(bool* is_running) {
+	HANDLE process_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (process_snapshot == INVALID_HANDLE_VALUE) {
 		return 1;
 	}
 
-	PROCESSENTRY32 pe32;
-	pe32.dwSize = sizeof(PROCESSENTRY32);
+	PROCESSENTRY32 process_entry;
+	process_entry.dwSize = sizeof(PROCESSENTRY32);
 
-	if (!Process32First(hSnapshot, &pe32)) {
-		CloseHandle(hSnapshot);
+	if (!Process32First(process_snapshot, &process_entry)) {
+		CloseHandle(process_snapshot);
 		return 1;
 	}
 
-	bool found = false;
+	bool obs_found = false;
 	do {
-		if (wcscmp(pe32.szExeFile, L"obs64.exe") == 0) {
-			found = true;
+		if (wcscmp(process_entry.szExeFile, L"obs64.exe") == 0) {
+			obs_found = true;
 			break;
 		}
-	} while (Process32Next(hSnapshot, &pe32));
+	} while (Process32Next(process_snapshot, &process_entry));
 
-	CloseHandle(hSnapshot);
-	*running = found;
+	CloseHandle(process_snapshot);
+	*is_running = obs_found;
 	return 0;
 }
 
+// Launch OBS if it is not already running.
 i32 launch_obs(const char* game_name) {
-	bool running = false;
-	u32 err = is_obs_running(&running);
+	bool is_running = false;
+	i32 err = is_obs_process_running(&is_running);
 	if (err) {
-		printf("ERROR: failed to check whether OBS is running.\n");
+		printf("ERROR: could not determine whether OBS is running.\n");
 		return 1;
 	}
-	if (running)
+	if (is_running)
 		return 0;
 
-	char* working_dir = "C:\\Program Files\\obs-studio\\bin\\64bit";
-	char exe_path[128];
-	strcpy_s(exe_path, 128, working_dir);
-	strcat_s(exe_path, 128, "\\obs64.exe");
+	char* obs_working_dir = "C:\\Program Files\\obs-studio\\bin\\64bit";
+	char obs_exe_path[128];
+	strcpy_s(obs_exe_path, 128, obs_working_dir);
+	strcat_s(obs_exe_path, 128, "\\obs64.exe");
 
-	HINSTANCE result = ShellExecuteA(NULL, "open", exe_path, "--minimize-to-tray", working_dir, SW_SHOWNORMAL);
+	HINSTANCE result = ShellExecuteA(NULL, "open", obs_exe_path, "--minimize-to-tray", obs_working_dir, SW_SHOWNORMAL);
 	if ((intptr_t)result > 32) {
-		printf("OBS Launched successfully.\n");
+		printf("OBS launched successfully.\n");
 	} else {
-		printf("Failed to launch OBS. Error code: %lld\n", (intptr_t)result);
+		printf("ERROR: failed to launch OBS (code: %lld).\n", (intptr_t)result);
 		return 1;
 	}
 
@@ -99,47 +106,47 @@ i32 launch_obs(const char* game_name) {
 	return 0;
 }
 
-
-
-
-
-void launch_game(u32 argc, char* argv[]) {
-	char cmd[2048] = "\"";
-	for (u32 i = 1; i < argc; ++i) {
-		strcat_s(cmd, 1024, "\"");
-		strcat_s(cmd, 1024, argv[i]);
-		strcat_s(cmd, 1024, "\"");
+// === App helpers ===
+// Rebuilds the original CLI into a single command line and executes it.
+void launch_target_game(i32 argc, char* argv[]) {
+	char command_line[2048] = "\"";
+	for (i32 i = 1; i < argc; ++i) {
+		strcat_s(command_line, 1024, "\"");
+		strcat_s(command_line, 1024, argv[i]);
+		strcat_s(command_line, 1024, "\"");
 		if (i < argc - 1) {
-			strcat_s(cmd, 1024, " ");
+			strcat_s(command_line, 1024, " ");
 		}
 	}
-	strcat_s(cmd, 1024, "\"");
-	printf("# %s\n", cmd);
-	system(cmd);
+	strcat_s(command_line, 1024, "\"");
+	printf("# %s\n", command_line);
+	system(command_line);
 }
 
-void print_args(u32 argc, char* argv[]) {
+// Log CLI arguments for debugging.
+void log_cli_args(i32 argc, char* argv[]) {
 	for (i32 i = 1; i < argc; ++i) {
 		log_info("arg[%d]: %s", i, argv[i]);
 	}
 }
 
-u32 main(u32 argc, char* argv[]) {
-	print_args(argc, argv);
+// === Entry point ===
+i32 main(i32 argc, char* argv[]) {
+	log_cli_args(argc, argv);
 
-	i32 err = 0;
+	i32 status = 0;
 	if (argc < 2) {
-		log_fatal("require at least 1 argument");
-		err = 1;
+		log_fatal("expected at least 1 argument (path to game executable).");
+		status = 1;
 		goto err_suspend;
 	}
 
-	char game_name[256];
-	if (err = parse_game_name(argv[1], game_name, sizeof(game_name))) {
-		log_fatal("failed to parse game name from %s", argv[1]);
+	char target_scene_name[256];
+	if (status = extract_game_name_from_path(argv[1], target_scene_name, sizeof(target_scene_name))) {
+		log_fatal("could not parse game name from path: %s", argv[1]);
 		goto err_suspend;
 	}
-	log_info("parsed game name: %s", game_name);
+	log_info("target scene name: %s", target_scene_name);
 
 
 	/*bool running = false;
@@ -153,43 +160,43 @@ u32 main(u32 argc, char* argv[]) {
 		}
 	}*/
 
-	init_conn();
+	obs_connect();
 	bool exists;
-	if (err = is_scene_exists(game_name, &exists)) {
-		log_fatal("failed to check whether scene exists");
+	if (status = obs_scene_exists(target_scene_name, &exists)) {
+		log_fatal("could not check whether the scene exists");
 		goto err_free_con;
 	}
 	if (!exists) {
-		log_warn("scene %s does not exists", game_name);
-		log_warn("create scene %s", game_name);
-		if (err = create_scene(game_name)) {
-			log_fatal("failed to create scene");
+		log_warn("scene '%s' does not exist", target_scene_name);
+		log_warn("creating scene '%s'", target_scene_name);
+		if (status = obs_create_scene(target_scene_name)) {
+			log_fatal("could not create scene");
 			goto err_free_con;
 		}
 	}
 
-	if (err = switch_scene(game_name)) {
-		log_fatal("failed to switch to scene %s", game_name);
+	if (status = obs_set_current_scene(target_scene_name)) {
+		log_fatal("could not switch to scene '%s'", target_scene_name);
 		goto err_free_con;
 	}
 
-	if (err = start_record()) {
-		log_fatal("failed to start record");
+	if (status = obs_start_recording()) {
+		log_fatal("could not start recording");
 		goto err_free_con;
 	}
 
-	launch_game(argc, argv);
+	launch_target_game(argc, argv);
 
-	if (err = stop_record()) {
-		log_fatal("failed to stop record. Just stop it manually");
+	if (status = obs_stop_recording()) {
+		log_fatal("could not stop recording; please stop it manually");
 		goto err_free_con;
 	}
 
 err_free_con:
-	free_conn();
+	obs_disconnect();
 err_suspend:
-	if (err)
+	if (status)
 		system("pause");
 
-	return err;
+	return status;
 }

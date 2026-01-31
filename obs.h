@@ -1,20 +1,24 @@
 #pragma once
+
+// === Includes ===
 #include "log.h"
 #include "mongoose.h"
 #include "types.h"
 #include <stdbool.h>
 
-i32 init_conn();
+// === Connection lifecycle ===
+i32 obs_connect();
 
+void obs_disconnect();
 
-void free_conn();
+// === Scene operations ===
+i32 obs_scene_exists(const char* scene_name, bool *exists);
 
-i32 is_scene_exists(const char* scene_name, bool *exists);
+i32 obs_create_scene(const char* scene_name);
 
-i32 create_scene(const char* scene_name);
+i32 obs_set_current_scene(const char* scene_name);
 
-i32 switch_scene(const char* scene_name);
+// === Recording operations ===
+i32 obs_start_recording();
 
-i32 start_record();
-
-i32 stop_record();
+i32 obs_stop_recording();
