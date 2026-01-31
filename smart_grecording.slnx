@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="smart_grecording.vcxproj" Id="92bf91ff-db3e-4276-a7cc-321929288611" />
+</Solution>
