@@ -24,6 +24,9 @@
     <ClCompile Include="obs.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="log.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="types.h">
@@ -33,6 +36,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="obs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="log.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

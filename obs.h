@@ -1,21 +1,20 @@
 #pragma once
-#include <stdbool.h>
-#include "types.h"
+#include "log.h"
 #include "mongoose.h"
-
-extern struct mg_mgr mgr;
+#include "types.h"
+#include <stdbool.h>
 
 i32 init_conn();
 
 
 void free_conn();
 
-bool is_scene_exists(const char* scene_name);
+i32 is_scene_exists(const char* scene_name, bool *exists);
 
 i32 create_scene(const char* scene_name);
 
 i32 switch_scene(const char* scene_name);
 
-i32 start_recording();
+i32 start_record();
 
-i32 stop_recording();
+i32 stop_record();

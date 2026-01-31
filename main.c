@@ -17,7 +17,7 @@ bool is_separator(char c) {
 	return (c == '\\' || c == '/');
 }
 
-u8 parse_game_name(const char* path, char* output, u32 output_size) {
+i32 parse_game_name(const char* path, char* output, u32 output_size) {
 	const char* common_ptr = strstr(path, "common");
 	if (common_ptr == NULL) {
 		return 1;
@@ -45,7 +45,7 @@ u8 parse_game_name(const char* path, char* output, u32 output_size) {
 
 
 // Check if OBS is running.
-u8 is_obs_running(bool* running) {
+i32 is_obs_running(bool* running) {
 	HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 	if (hSnapshot == INVALID_HANDLE_VALUE) {
 		return 1;
@@ -72,7 +72,7 @@ u8 is_obs_running(bool* running) {
 	return 0;
 }
 
-u8 launch_obs(const char* game_name) {
+i32 launch_obs(const char* game_name) {
 	bool running = false;
 	u32 err = is_obs_running(&running);
 	if (err) {
@@ -104,7 +104,7 @@ u8 launch_obs(const char* game_name) {
 
 
 void launch_game(u32 argc, char* argv[]) {
-	char cmd[1024] = "\"";
+	char cmd[2048] = "\"";
 	for (u32 i = 1; i < argc; ++i) {
 		strcat_s(cmd, 1024, "\"");
 		strcat_s(cmd, 1024, argv[i]);
@@ -118,22 +118,31 @@ void launch_game(u32 argc, char* argv[]) {
 	system(cmd);
 }
 
+void print_args(u32 argc, char* argv[]) {
+	for (i32 i = 1; i < argc; ++i) {
+		log_info("arg[%d]: %s", i, argv[i]);
+	}
+}
+
 u32 main(u32 argc, char* argv[]) {
+	print_args(argc, argv);
+
 	i32 err = 0;
 	if (argc < 2) {
-		printf("[ERROR]: require at least 1 argument\n");
+		log_fatal("require at least 1 argument");
 		err = 1;
 		goto err_suspend;
 	}
 
 	char game_name[256];
-	if (err = parse_game_name(argv[1], game_name, 256)) {
-		printf("[ERROR]: failed to parse game name from %s.\n", argv[1]);
+	if (err = parse_game_name(argv[1], game_name, sizeof(game_name))) {
+		log_fatal("failed to parse game name from %s", argv[1]);
 		goto err_suspend;
 	}
+	log_info("parsed game name: %s", game_name);
 
 
-	bool running = false;
+	/*bool running = false;
 	if (is_obs_running(&running)) {
 		printf("[ERROR]: failed to loopup OBS process status.\n");
 		goto err_suspend;
@@ -142,20 +151,39 @@ u32 main(u32 argc, char* argv[]) {
 		if (err = launch_obs(game_name)) {
 			goto err_suspend;
 		}
-	}
+	}*/
 
 	init_conn();
-	bool exists = is_scene_exists(game_name);
+	bool exists;
+	if (err = is_scene_exists(game_name, &exists)) {
+		log_fatal("failed to check whether scene exists");
+		goto err_free_con;
+	}
 	if (!exists) {
-		printf("[WARN]: scene %s does not exists.\n", game_name);
-		printf("[WARN]: create scene %s\n", game_name);
-		create_scene(game_name);
+		log_warn("scene %s does not exists", game_name);
+		log_warn("create scene %s", game_name);
+		if (err = create_scene(game_name)) {
+			log_fatal("failed to create scene");
+			goto err_free_con;
+		}
 	}
 
-	switch_scene(game_name);
-	start_recording();
+	if (err = switch_scene(game_name)) {
+		log_fatal("failed to switch to scene %s", game_name);
+		goto err_free_con;
+	}
+
+	if (err = start_record()) {
+		log_fatal("failed to start record");
+		goto err_free_con;
+	}
+
 	launch_game(argc, argv);
-	stop_recording();
+
+	if (err = stop_record()) {
+		log_fatal("failed to stop record. Just stop it manually");
+		goto err_free_con;
+	}
 
 err_free_con:
 	free_conn();

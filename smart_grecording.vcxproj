@@ -19,11 +19,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="log.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="mongoose.c" />
     <ClCompile Include="obs.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="log.h" />
     <ClInclude Include="mongoose.h" />
     <ClInclude Include="obs.h" />
     <ClInclude Include="types.h" />
@@ -112,7 +114,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;LOG_USE_COLOR;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
