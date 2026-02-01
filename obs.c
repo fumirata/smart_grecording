@@ -196,7 +196,9 @@ i32 obs_scene_exists(const char* scene_name, bool* exists) {
 	i32 err = obs_send_request(payload);
 	
 	if (!err) {
-		*exists = strstr(obs_ctx.data, scene_name);
+		char pattern[128];
+		sprintf_s(pattern, sizeof(pattern), "/%s/", scene_name);
+		*exists = strstr(obs_ctx.data, pattern);
 	}
 
 	obs_reset_response();
