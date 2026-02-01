@@ -1,52 +1,21 @@
 // === Includes ===
+#include "game_launcher.h"
 #include "mongoose.h"
 #include "obs.h"
 #include "types.h"
+#include <windows.h>
+#include <shellapi.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <tlhelp32.h>
 #include <wchar.h>
-#include <windows.h>
-#include <shellapi.h>
+#include "path.h"
 
 
 
 
-
-// === Path helpers ===
-// Accept both Windows and POSIX separators to handle mixed paths.
-bool is_path_separator(char c) {
-	return (c == '\\' || c == '/');
-}
-
-// Extract the Steam "common/<game>" folder name from a full path.
-i32 extract_game_name_from_path(const char* path, char* output, i32 output_size) {
-	const char* common_ptr = strstr(path, "common");
-	if (common_ptr == NULL) {
-		return 1;
-	}
-
-	const char* start = common_ptr + 6;
-	if (is_path_separator(*start)) {
-		start++;
-	}
-
-	const char* end = start;
-	while (*end != '\0' && !is_path_separator(*end)) {
-		end++;
-	}
-
-	u64 len = end - start;
-	if (len <= 0) {
-		return 1;
-	}
-
-	strncpy_s(output, output_size, start, len);
-
-	return 0;
-}
 
 
 // === OBS helpers ===
@@ -108,20 +77,20 @@ i32 launch_obs(const char* game_name) {
 
 // === App helpers ===
 // Rebuilds the original CLI into a single command line and executes it.
-void launch_target_game(i32 argc, char* argv[]) {
-	char command_line[2048] = "\"";
-	for (i32 i = 1; i < argc; ++i) {
-		strcat_s(command_line, 1024, "\"");
-		strcat_s(command_line, 1024, argv[i]);
-		strcat_s(command_line, 1024, "\"");
-		if (i < argc - 1) {
-			strcat_s(command_line, 1024, " ");
-		}
-	}
-	strcat_s(command_line, 1024, "\"");
-	printf("# %s\n", command_line);
-	system(command_line);
-}
+//void launch_target_game(i32 argc, char* argv[]) {
+//	char command_line[2048] = "\"";
+//	for (i32 i = 1; i < argc; ++i) {
+//		strcat_s(command_line, 1024, "\"");
+//		strcat_s(command_line, 1024, argv[i]);
+//		strcat_s(command_line, 1024, "\"");
+//		if (i < argc - 1) {
+//			strcat_s(command_line, 1024, " ");
+//		}
+//	}
+//	strcat_s(command_line, 1024, "\"");
+//	printf("# %s\n", command_line);
+//	system(command_line);
+//}
 
 // Log CLI arguments for debugging.
 void log_cli_args(i32 argc, char* argv[]) {
@@ -185,7 +154,10 @@ i32 main(i32 argc, char* argv[]) {
 		goto err_free_con;
 	}
 
-	launch_target_game(argc, argv);
+	if (status = launch_target_game(argc, argv)) {
+		log_fatal("could not start game");
+		goto err_free_con;
+	}
 
 	if (status = obs_stop_recording()) {
 		log_fatal("could not stop recording; please stop it manually");

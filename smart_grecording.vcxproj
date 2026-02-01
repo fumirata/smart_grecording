@@ -19,15 +19,19 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="game_launcher.c" />
     <ClCompile Include="log.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="mongoose.c" />
     <ClCompile Include="obs.c" />
+    <ClCompile Include="path.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="game_launcher.h" />
     <ClInclude Include="log.h" />
     <ClInclude Include="mongoose.h" />
     <ClInclude Include="obs.h" />
+    <ClInclude Include="path.h" />
     <ClInclude Include="types.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
