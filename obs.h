@@ -15,9 +15,9 @@
 #define OBS_REQUEST_TIMEOUT_MS 5000
 #endif
 
-i32 obs_connect();
+i32 obs_connect(void);
 
-void obs_disconnect();
+void obs_disconnect(void);
 
 // === Scene operations ===
 i32 obs_scene_exists(const char* scene_name, bool *exists);
@@ -27,6 +27,6 @@ i32 obs_create_scene(const char* scene_name);
 i32 obs_set_current_scene(const char* scene_name);
 
 // === Recording operations ===
-i32 obs_start_recording();
+i32 obs_start_recording(void);
 
-i32 obs_stop_recording();
+i32 obs_stop_recording(void);

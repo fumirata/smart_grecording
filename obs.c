@@ -34,6 +34,7 @@ void handle_hello_op(struct mg_connection* con, struct mg_ws_message* msg) {
 
 // Mark the connection as identified after OBS accepts the handshake.
 void handle_identified_op(struct mg_connection* con, struct mg_ws_message* msg) {
+	(void)con;	// supresss unused reference warning
 	i32 op = mg_json_get_long(msg->data, "$.op", -1);
 	if (op != 2)
 		return;
@@ -44,6 +45,7 @@ void handle_identified_op(struct mg_connection* con, struct mg_ws_message* msg) 
 
 // Build a slash-delimited scene list string to allow substring checks.
 void handle_scene_list_response(struct mg_connection* con, struct mg_ws_message* msg) {
+	(void)con;	// supresss unused reference warning
 	// Only process RequestResponse (op = 7)
 	i32 op = mg_json_get_long(msg->data, "$.op", -1);
 	if (op != 7)
@@ -90,6 +92,7 @@ void handle_scene_list_response(struct mg_connection* con, struct mg_ws_message*
 
 // Handle one-shot request responses (create/switch/start/stop).
 void handle_simple_request_response(struct mg_connection* con, struct mg_ws_message* msg) {
+	(void)con;	// supresss unused reference warning
 	i32 op = mg_json_get_long(msg->data, "$.op", -1);
 	if (op != 7)
 		return;
@@ -139,7 +142,7 @@ void obs_poll_while_flag_equals(bool* flag, bool expected_value) {
 
 // === Connection lifecycle ===
 // Open the OBS WebSocket connection and wait until identified.
-i32 obs_connect() {
+i32 obs_connect(void) {
 	mg_log_set(MG_LL_ERROR);
 	mg_mgr_init(&obs_mgr);
 	struct mg_connection* con = mg_ws_connect(&obs_mgr, obs_ws_url, obs_ws_event_handler, NULL, NULL);
@@ -176,7 +179,7 @@ i32 obs_send_request(char* payload) {
 }
 
 // Free any response payload stored in the context.
-void obs_reset_response() {
+void obs_reset_response(void) {
 	if (obs_ctx.data)
 		free(obs_ctx.data);
 	obs_ctx.data = NULL;
@@ -233,7 +236,7 @@ i32 obs_set_current_scene(const char* scene_name) {
 	return err;
 }
 
-i32 obs_start_recording() {
+i32 obs_start_recording(void) {
 	char payload[1024];
 	mg_snprintf(payload, sizeof(payload), "{%m:6,%m:{%m:%m,%m:%m,%m:{}}}",
 				mg_print_esc, 0, "op",
@@ -246,7 +249,7 @@ i32 obs_start_recording() {
 	return err;
 }
 
-i32 obs_stop_recording() {
+i32 obs_stop_recording(void) {
 	char payload[1024];
 	mg_snprintf(payload, sizeof(payload), "{%m:6,%m:{%m:%m,%m:%m,%m:{}}}",
 				mg_print_esc, 0, "op",
@@ -260,6 +263,6 @@ i32 obs_stop_recording() {
 }
 
 // === Shutdown ===
-void obs_disconnect() {
+void obs_disconnect(void) {
 	mg_mgr_free(&obs_mgr);
 }

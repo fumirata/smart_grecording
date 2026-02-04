@@ -41,10 +41,12 @@ void extract_parent_folder(const char* path, char* output) {
 	u64 len = strlen(path);
 	strcpy_s(output, len + 1, path);
 
-	for (u64 i = len; i >= 0; --i) {
+	for (u64 i = len; i > 0; --i) {
 		if (is_path_separator(output[i])) {
 			output[i] = '\0';
 			return;
 		}
 	}
+
+	output[0] = '\0';
 }
