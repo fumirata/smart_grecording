@@ -103,8 +103,10 @@ void handle_simple_request_response(struct mg_connection* con, struct mg_ws_mess
 	i32 is_sw = strcmp("SetCurrentProgramScene", req_type);
 	i32 is_start = strcmp("StartRecord", req_type);
 	i32 is_stop = strcmp("StopRecord", req_type);
-	if (is_cr != 0 && is_sw != 0 && is_start != 0 && is_stop != 0)
+	if (is_cr != 0 && is_sw != 0 && is_start != 0 && is_stop != 0) {
+		free(req_type);
 		return;
+	}
 
 	bool req_status = mg_json_get_bool(msg->data, "$.d.requestStatus.result", false);
 	char* comment = mg_json_get_str(msg->data, "$.d.requestStatus.comment");
@@ -145,6 +147,8 @@ void obs_poll_while_flag_equals(bool* flag, bool expected_value) {
 i32 obs_connect(void) {
 	mg_log_set(MG_LL_ERROR);
 	mg_mgr_init(&obs_mgr);
+	obs_ctx.identified = false;
+	obs_ctx.task_complete = false;
 	struct mg_connection* con = mg_ws_connect(&obs_mgr, obs_ws_url, obs_ws_event_handler, NULL, NULL);
 	if (!con) {
 		log_fatal("could not create OBS websocket connection");
@@ -174,6 +178,10 @@ i32 obs_send_request(char* payload) {
 
 	mg_ws_send(obs_ctx.con, payload, strlen(payload), WEBSOCKET_OP_TEXT);
 	obs_poll_while_flag_equals(&obs_ctx.task_complete, true);
+	if (!obs_ctx.task_complete) {
+		log_error("OBS request timed out after %d ms", OBS_CONNECT_TIMEOUT_MS);
+		return 1;
+	}
 
 	return 0;
 }

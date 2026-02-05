@@ -21,7 +21,11 @@ i32 launch_target_game(i32 argc, char* argv[]) {
 	}
 
 	char game_work_dir[2048];
-	extract_parent_folder(argv[1], game_work_dir);
+	err = extract_parent_folder(argv[1], game_work_dir, sizeof(game_work_dir));
+	if (err) {
+		log_warn("could not parse game working directory.");
+		return err;
+	}
 	log_info("parsed game working directory: %s", game_work_dir);
 
 	STARTUPINFOA si;
@@ -31,13 +35,14 @@ i32 launch_target_game(i32 argc, char* argv[]) {
 	si.cb = sizeof(si);
 	BOOL rc = CreateProcessA(NULL, command_line, NULL, NULL, FALSE, 0, NULL, game_work_dir, &si, &pi);
 	err = rc == 0;
-
-	CloseHandle(pi.hThread);
-	// Wait for the launcher, then follow any child process it spawns (launchers that exit quickly).
-	do {
-		WaitForSingleObject(pi.hProcess, INFINITE);
-		CloseHandle(pi.hProcess);
-	} while (try_open_child_process(pi.dwProcessId, &pi));
+	if (!err) {
+		CloseHandle(pi.hThread);
+		// Wait for the launcher, then follow any child process it spawns (launchers that exit quickly).
+		do {
+			WaitForSingleObject(pi.hProcess, INFINITE);
+			CloseHandle(pi.hProcess);
+		} while (try_open_child_process(pi.dwProcessId, &pi));
+	}
 
 	return err;
 }

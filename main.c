@@ -131,7 +131,12 @@ i32 main(i32 argc, char* argv[]) {
 		}
 	}*/
 
-	obs_connect();
+	err = obs_connect();
+	if (err) {
+		log_fatal("could not connect to OBS");
+		goto err_suspend;
+	}
+
 	bool exists;
 	err = obs_scene_exists(target_scene_name, &exists);
 	if (err) {

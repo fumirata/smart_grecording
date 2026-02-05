@@ -37,16 +37,23 @@ i32 extract_game_name_from_path(const char* path, char* output, i32 output_size)
 	return 0;
 }
 
-void extract_parent_folder(const char* path, char* output) {
+// Returns 0 on success, non-zero on failure (e.g., output buffer too small).
+i32 extract_parent_folder(const char* path, char* output, i32 output_size) {
 	u64 len = strlen(path);
-	strcpy_s(output, len + 1, path);
+	if (len + 1 > (u64)output_size) {
+		goto err;
+	}
+
+	strcpy_s(output, output_size, path);
 
 	for (u64 i = len; i > 0; --i) {
 		if (is_path_separator(output[i])) {
 			output[i] = '\0';
-			return;
+			return 0;
 		}
 	}
 
+err:
 	output[0] = '\0';
+	return 1;
 }
